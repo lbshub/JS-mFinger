@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
+	<title>mFinger test</title>
+	<style>
+		*{margin: 0; padding: 0;}
+		html, body, .wrapper, .box{width: 100%; height: 100%;}
+		.wrapper{overflow: hidden; background: #000; display: table;}
+		.box{display: table-cell; text-align: center; vertical-align: middle;}
+		.box img{ width: 100%; vertical-align:middle;}
+		.test{position: fixed; bottom: 0; font-weight: bold; font-size: 18px; color: #fff;}
+	</style>
+</head>
+<body>
+
+	<div class="wrapper">
+		<div class="box">
+			<img src="mm.jpg" />
+		</div>
+	</div>
+
+	<div class="test"></div>
+
+	<script src="mFinger.min.js"></script>
+	<script>
+		var test = document.querySelector('.test');
+		var log = function(t) {
+			test.innerHTML += t + '<br>';
+		};
+
+		var finger = new mFinger('.wrapper', {
+			tap: function(e) {
+				log('单击了1')
+			},
+			doubleTap: function(e) {
+				log('双击了1')
+			},
+			longTap: function(e) {
+				log('长按了1')
+			},
+			pressMove: function(e) {
+				log('移动了1')
+			},
+			swipe: function(e) {
+				log('滑动了1')
+			},
+			pinch: function(e) {
+				log('缩放了1')
+			},
+			rotate: function(e) {
+				log('旋转了1')
+			}
+		});
+
+		finger.$on('tap', function(e) {
+			log('单击了2')
+		});
+		finger.$on('doubleTap', function(e) {
+			log('双击了2')
+		});
+		finger.$on('longTap', function(e) {
+			log('长按了2')
+		});
+		finger.$on('pressMove', function(e) {
+			log('移动了2')
+		});
+		finger.$on('swipe', function(e) {
+			log('滑动了2')
+				// log( e.direction + ' deltaX: '+ e.deltaX + ' deltaY: ' + e.deltaY)
+		});
+		finger.$on('pinch', function(e) {
+			log('缩放了2')
+				// log('缩放了' + e.ratio ); 
+		});
+		finger.$on('rotate', function(e) {
+			log('旋转了2')
+				// log('旋转了' + e.angle ); 
+		});
+	</script>
+</body>
+</html>

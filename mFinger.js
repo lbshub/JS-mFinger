@@ -3,9 +3,11 @@
  * Date: 2016-03-20
  * ========================================================
  * el 手势对象(一个字符串的CSS选择器或者元素对象)
- * 配置选项
+ * ========================================================
+ * *配置选项*
  * opts.stop 是否阻止冒泡 默认true
  * opts.prevent 是否取消默认行为 默认true
+ * opts.flick 执行快击事件函数(无延迟)
  * opts.tap 执行单击事件函数
  * opts.doubleTap 执行双击事件函数
  * opts.longTap 执行长按事件函数
@@ -13,19 +15,26 @@
  * opts.swipe 执行滑动事件函数
  * opts.pinch 执行缩放事件函数
  * opts.rotate 执行旋转事件函数
+ * opts.start 执行触摸开始事件函数
+ * opts.move 执行触摸移动事件函数
+ * opts.end 执行触摸结束事件函数
  * ========================================================
- * 实例方法
+ * *实例方法*
  * this.$on(type, fn) 增加一个手势事件函数
  * this.$off(type, fn) 移除一个手势事件函数
  * ========================================================
  * 手势事件类型 (type)
+ * flick (快击)
  * tap (单击)
  * doubleTap (双击)
  * longTap (长按)
- * pressMove (移动) (e.deltaX e.deltaY)
- * swipe (滑动) (e.direction e.deltaX e.deltaY)
- * pinch (缩放) (e.ratio) 
- * rotate (旋转) (e.angle)
+ * pressMove (移动) (e.$deltaX e.$deltaY)
+ * swipe (滑动) (e.$direction e.$deltaX e.$deltaY)
+ * pinch (缩放) (e.$scale) 
+ * rotate (旋转) (e.$angle)
+ * start (触摸开始)
+ * move (触摸移动)
+ * end (触摸结束)
  * ========================================================
  **/
 
@@ -81,6 +90,7 @@
 		this.stop = opts.stop === false ? false : true;
 		this.prevent = opts.prevent === false ? false : true;
 
+		this.flick = opts.flick || function() {};
 		this.tap = opts.tap || function() {};
 		this.doubleTap = opts.doubleTap || function() {};
 		this.longTap = opts.longTap || function() {};
@@ -89,6 +99,10 @@
 		this.pinch = opts.pinch || function() {};
 		this.rotate = opts.rotate || function() {};
 
+		this.start = opts.start || function() {};
+		this.move = opts.move || function() {};
+		this.end = opts.end || function() {};
+
 		this._events = {};
 		this.touchVector = null;
 		this.touchDistance = 0;
@@ -96,7 +110,6 @@
 		this.previousTouchPoint = null;
 		this.tapTimeout = null;
 		this.longTapTimeout = null;
-		this.initScale = 1;
 
 		utils.on(this.el, 'touchstart', this._start.bind(this));
 		utils.on(this.el, 'touchmove', this._move.bind(this));
@@ -107,6 +120,7 @@
 	};
 	mFinger.prototype = {
 		_init: function() {
+			this.$on('flick', this.flick);
 			this.$on('tap', this.tap);
 			this.$on('doubleTap', this.doubleTap);
 			this.$on('longTap', this.longTap);
@@ -114,6 +128,9 @@
 			this.$on('swipe', this.swipe);
 			this.$on('pinch', this.pinch);
 			this.$on('rotate', this.rotate);
+			this.$on('start', this.start);
+			this.$on('move', this.move);
+			this.$on('end', this.end);
 		},
 		_start: function(e) {
 			if (!e.touches) return;
@@ -152,6 +169,8 @@
 					startY: this.startY
 				};
 			}
+			// 触发 start (触摸开始) 
+			this._trigger('start', e);
 		},
 		_move: function(e) {
 			if (!e.touches) return;
@@ -168,15 +187,12 @@
 					};
 					var distance = utils.getDistance(vector.x, vector.y);
 					if (this.touchDistance > 0) {
-						var pinchScale = distance / this.touchDistance;
-						e.ratio = pinchScale - this.initScale;
-						// 触发 pinch(缩放) 传入缩放比率属性(ratio) scale关键字不能使用##safari
+						e.$scale = distance / this.touchDistance;
+						// 触发 pinch(缩放) 传入缩放比率属性($scale) scale关键字不能使用##safari
 						this._trigger('pinch', e);
-						this.initScale = pinchScale;
 					}
-					var angle = utils.getRotateAngle(vector, this.touchVector);
-					e.angle = angle;
-					// 触发 rotate(旋转) 传入角度属性(angle)
+					e.$angle = utils.getRotateAngle(vector, this.touchVector);
+					// 触发 rotate(旋转) 传入角度属性($angle)
 					this._trigger('rotate', e);
 					this.touchVector.x = vector.x;
 					this.touchVector.y = vector.y;
@@ -184,30 +200,36 @@
 			} else {
 				this.deltaX = this.moveX === null ? 0 : moveX - this.moveX;
 				this.deltaY = this.moveY === null ? 0 : moveY - this.moveY;
-				e.deltaX = this.deltaX;
-				e.deltaY = this.deltaY;
-				// 触发 pressMove (移动) 传入移动差值属性(deltaX deltaY)
+				e.$deltaX = this.deltaX;
+				e.$deltaY = this.deltaY;
+				// 触发 pressMove (移动) 传入移动差值属性($deltaX $deltaY)
 				this._trigger('pressMove', e);
 			}
 			this.moveX = moveX;
 			this.moveY = moveY;
+			// 触发 move (触摸移动) 
+			this._trigger('move', e);
 		},
 		_end: function(e) {
 			if (!e.changedTouches) return;
+			if (this.stop) e.stopPropagation();
+			if (this.prevent) e.preventDefault();
 			var timestamp = Date.now();
 			this._clearLongTapTimeout();
 			if ((this.moveX !== null && Math.abs(this.moveX - this.startX) > 10) || (this.moveY !== null && Math.abs(this.moveY - this.startY) > 10)) {
 				// 手指移动的位移要大于10像素
 				// 手指和屏幕的接触时间要小于300毫秒
 				if (timestamp - this.startTime < 300) {
-					e.deltaX = this.deltaX;
-					e.deltaY = this.deltaY;
-					e.direction = utils.getDirection(this.startX, this.startY, this.moveX, this.moveY);
-					// 触发 swipe(滑动) 传入差值属性(deltaX deltaY) 方向属性(direction)
+					e.$deltaX = this.deltaX;
+					e.$deltaY = this.deltaY;
+					e.$direction = utils.getDirection(this.startX, this.startY, this.moveX, this.moveY);
+					// 触发 swipe(滑动) 传入差值属性($deltaX $deltaY) 方向属性($direction)
 					this._trigger('swipe', e);
 				}
 			} else {
 				if (timestamp - this.startTime > 500) return;
+				// 触发 flick (快击)
+				this._trigger('flick', e);
 				if (!!this.isDoubleTap) {
 					this.isDoubleTap = false;
 					this.tapTimeout && clearTimeout(this.tapTimeout);
@@ -220,6 +242,8 @@
 					}.bind(this), 250);
 				}
 			}
+			// 触发 end (触摸结束) 
+			this._trigger('end', e);
 		},
 		_reset: function() {
 			this.moveX = null;

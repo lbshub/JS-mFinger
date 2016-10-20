@@ -23,7 +23,7 @@
 
 	<div class="test"></div>
 
-	<script src="mFinger.min.js"></script>
+	<script src="mFinger.js"></script>
 	<script>
 		var test = document.querySelector('.test');
 		var log = function(t) {
@@ -31,6 +31,9 @@
 		};
 
 		var finger = new mFinger('.wrapper', {
+			flick: function(e) {
+				log('快击了1')
+			},
 			tap: function(e) {
 				log('单击了1')
 			},
@@ -51,33 +54,43 @@
 			},
 			rotate: function(e) {
 				log('旋转了1')
+			},
+			start: function(e) {
+				// 触摸开始
+			},
+			move: function(e) {
+				// 触摸移动
+			},
+			end: function(e) {
+				// 触摸结束
 			}
 		});
 
-		finger.$on('tap', function(e) {
-			log('单击了2')
-		});
-		finger.$on('doubleTap', function(e) {
-			log('双击了2')
-		});
-		finger.$on('longTap', function(e) {
-			log('长按了2')
-		});
-		finger.$on('pressMove', function(e) {
-			log('移动了2')
-		});
-		finger.$on('swipe', function(e) {
-			log('滑动了2')
-				// log( e.direction + ' deltaX: '+ e.deltaX + ' deltaY: ' + e.deltaY)
-		});
-		finger.$on('pinch', function(e) {
-			log('缩放了2')
-				// log('缩放了' + e.ratio ); 
-		});
-		finger.$on('rotate', function(e) {
-			log('旋转了2')
-				// log('旋转了' + e.angle ); 
-		});
+		// var finger = new mFinger('.wrapper');
+		// finger.$on('flick', function(e) {
+		// 	log('快击了2')
+		// });
+		// finger.$on('tap', function(e) {
+		// 	log('单击了2')
+		// });
+		// finger.$on('doubleTap', function(e) {
+		// 	log('双击了2')
+		// });
+		// finger.$on('longTap', function(e) {
+		// 	log('长按了2')
+		// });
+		// finger.$on('pressMove', function(e) {
+		// 	log('移动了2')
+		// });
+		// finger.$on('swipe', function(e) {
+		// 	log('滑动了2')
+		// });
+		// finger.$on('pinch', function(e) {
+		// 	log('缩放了2')
+		// });
+		// finger.$on('rotate', function(e) {
+		// 	log('旋转了2')
+		// });
 	</script>
 </body>
 </html>

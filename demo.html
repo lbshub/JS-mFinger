@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
+	<title>mFinger test</title>
+	<style>
+		*{margin: 0; padding: 0;}
+		html, body, .wrapper, .box{width: 100%; height: 100%;}
+		.wrapper{position: relative; display: table; overflow: hidden; background: #000; }
+		.box{display: table-cell; text-align: center; vertical-align: middle;}
+		.box img{ width: 100%; vertical-align:middle;}
+		.info{display: none; position: absolute;; left: 0; bottom: 0; z-index: 100; padding: 0 10px;  color: #fff; font-size: 14px; line-height: 1.6;}
+		.info h2{font-size: 18px; font-weight: normal;}
+	</style>
+</head>
+<body>
+
+	<div class="wrapper">
+		<div class="box">
+			<img src="mm.jpg" />
+		</div>
+		<div class="info">
+			<h2>这是一个标题</h2>
+			<p>这是一段文字说明这是一段文字说明这是一段文字说明这是一段文字说明这是一段文字说明这是一段文字说明这是一段文字说明这是一段文字说明</p>
+		</div>
+	</div>
+
+	<script src="mFinger.min.js"></script>
+	<script src="transform.min.js"></script>
+	<script>
+		var info = document.querySelector('.info');
+
+		var el = document.querySelector('.box img');
+		Transform.watch(el); 
+		// 如未调用 Transform.animate会自动调用
+		
+		var initScale = 1;
+		var initL = 0, initT = 0;
+		var initR = initB = 0;
+		var isPressMove = false;
+		var isRotate = false;
+		var Tween = {
+			easeInOutSine: function(k) {
+				return (-.5 * (Math.cos(Math.PI * k) - 1));
+			}
+		};
+		var finger = new mFinger('.wrapper', {
+			flick: function(e) {
+				// 快击
+			},
+			tap: function(e) {
+				info.style.display = getComputedStyle(info, null)['display'] === 'none' ?  'block' : 'none';
+			},
+			doubleTap: function(e) {
+				if (el.scaleX > 1) {
+					Transform.animate(el, {
+						scaleX: 1,
+						scaleY: 1,
+						translateX: 0,
+						translateY: 0
+					}, {
+						duration: 300,
+						ease: Tween.easeInOutSine,
+						callback: function() {
+							console.log('图片还原了');
+						}
+					});
+				} else {
+					var box = el.getBoundingClientRect();
+					var px = e.changedTouches[0].pageX;
+					var py = e.changedTouches[0].pageY;
+					var x = box.width / 2 - (px - box.left)
+					var y = box.height / 2 - (py - box.top);
+					Transform.animate(el, {
+						scaleX: 2,
+						scaleY: 2,
+						translateX: x,
+						translateY: y
+					}, 300, Tween.easeInOutSine, function(){
+						console.log('图片放大了2倍');
+					});
+				}
+			},
+			longTap: function(e) {
+				// 长按
+			},
+			pressMove: function(e) {
+				if (el.scaleX <= 1) return;
+				isPressMove = true;
+				var dx = e.$deltaX, dy = e.$deltaY;
+				if (el.translateX > initL || el.translateX < initR) dx /= 2;
+				if (el.translateY > initT || el.translateY < initB) dy /= 2;
+				el.translateX += dx;
+				el.translateY += dy;
+			},
+			swipe: function(e) {
+				if (el.scaleX <= 1) return;
+				isPressMove = false;
+				var dx = e.$deltaX, dy = e.$deltaY;
+				// .... 左上 左下 右上 右下
+				if (dx < 0 && dy < 0) {
+					Transform.animate(el, {
+						translateX: initR,
+						translateY: initB
+					}, function(){
+						console.log('向左上滑动了')
+					});
+				} else if (dx < 0 && dy > 0) {
+					Transform.animate(el, {
+						translateX: initR,
+						translateY: initT
+					}, function(){
+						console.log('向左下滑动了')
+					});
+				} else if (dx > 0 && dy < 0) {
+					Transform.animate(el, {
+						translateX: initL,
+						translateY: initB
+					}, function(){
+						console.log('向右上滑动了')
+					});
+				} else if (dx > 0 && dy > 0) {
+					Transform.animate(el, {
+						translateX: initL,
+						translateY: initT
+					}, function(){
+						console.log('向右下滑动了')
+					});
+				} else if ( dx < 0 && dy === 0) {
+					Transform.animate(el, {
+						translateX: initR
+					}, function(){
+						console.log('向左滑动了')
+					});
+				} else if ( dx > 0 && dy === 0) {
+					Transform.animate(el, {
+						translateX: initL
+					}, function(){
+						console.log('向右滑动了')
+					});
+				} else if ( dx === 0 && dy < 0) {
+					Transform.animate(el, {
+						translateY: initB
+					}, function(){
+						console.log('向上滑动了')
+					});
+				} else if ( dx === 0 && dy > 0) {
+					Transform.animate(el, {
+						translateY: initT
+					}, function(){
+						console.log('向下滑动了')
+					});
+				}
+			},
+			pinch: function(e) {
+				el.scaleX = el.scaleY = initScale * e.$scale;
+			},
+			rotate: function(e) {
+				if (el.scaleX > 1) return;
+				isRotate = true;
+				el.rotate += e.$angle;
+			},
+			start: function(e) {
+				Transform.stop(el);
+				isPressMove = false;
+				isRotate = false;
+				initScale = el.scaleX;
+				if (initScale > 1) {
+					var box = el.getBoundingClientRect();
+					var width = document.documentElement.clientWidth;
+					var height = document.documentElement.clientHeight;
+					var LR = (width - box.width) / 2;
+					var TB = (height - box.height) / 2;
+					if ( LR > 0 ) LR = 0;
+					if ( TB > 0 ) TB = 0;
+					initL = -LR;
+					initR = LR;
+					initT = -TB;
+					initB = TB;
+				}
+			},
+			move: function(e) {
+				// 移动
+			},
+			end: function(e) {
+				if (isRotate) {
+					var rotation = el.rotate % 360;
+					if (rotation < 0) rotation = 360 + rotation;
+					el.rotate = rotation;
+					if (rotation > 0 && rotation < 45) {
+						Transform.animate(el, {
+							rotate: 0,
+							translateX: 0,
+							translateY: 0
+						}, 300);
+					} else if (rotation >= 315) {
+						Transform.animate(el, {
+							rotate: 360,
+							translateX: 0,
+							translateY: 0
+						}, 300);
+					} else if (rotation >= 45 && rotation < 135) {
+						Transform.animate(el, {
+							rotate: 90,
+							translateX: 0,
+							translateY: 0
+						}, 300);
+					} else if (rotation >= 135 && rotation < 225) {
+						Transform.animate(el, {
+							rotate: 180,
+							translateX: 0,
+							translateY: 0
+						}, 300);
+					} else if (rotation >= 225 && rotation < 315) {
+						Transform.animate(el, {
+							rotate: 270,
+							translateX: 0,
+							translateY: 0
+						}, 300);
+					}
+				}
+				if (el.scaleX < 1) {
+					Transform.animate(el, {
+						scaleX: 1,
+						scaleY: 1
+					}, 300);
+				}
+				if (el.scaleX > 2) {
+					Transform.animate(el, {
+						scaleX: 2,
+						scaleY: 2
+					}, 300);
+				}
+				if (el.scaleX > 1) {
+					if (!isPressMove) return;
+					if (el.translateX > initL) {
+						Transform.animate(el, {
+							translateX: initL
+						}, 300);
+					}
+					if (el.translateX < initR) {
+						Transform.animate(el, {
+							translateX: initR
+						}, 300);
+					}
+					if (el.translateY > initT) {
+						Transform.animate(el, {
+							translateY: initT
+						}, 300);
+					}
+					if (el.translateY < initB) {
+						Transform.animate(el, {
+							translateY: initB
+						}, 300);
+					}
+				}
+			}
+		});		
+	</script>
+</body>
+</html>
